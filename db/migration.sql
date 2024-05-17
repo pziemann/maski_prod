@@ -1,3 +1,4 @@
+
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'colour') THEN
