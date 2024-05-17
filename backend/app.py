@@ -4,7 +4,7 @@ import psycopg2
 import os
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}})  
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 def get_db_connection():
     conn = psycopg2.connect(
@@ -15,11 +15,16 @@ def get_db_connection():
     )
     return conn
 
+# Routes for mask_order table
 @app.route('/api/data', methods=['GET'])
 def get_data():
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute('SELECT id, size_x, size_y, size_z, color, entry, payment, payment_status, discount, date_of_order, finished, payment_received, source_of_order, nickname, description, price FROM mask_order')
+    cur.execute('''
+        SELECT id, size_x, size_y, size_z, color, entry, payment, payment_status, discount, 
+               date_of_order, finished, payment_received, source_of_order, nickname, description, price
+        FROM mask_order
+    ''')
     rows = cur.fetchall()
     cur.close()
     conn.close()
@@ -37,9 +42,9 @@ def get_data():
         'finished': row[10],
         'payment_received': row[11],
         'source_of_order': row[12],
-        'nickname': row[13],        # New column
-        'description': row[14],     # New column
-        'price': row[15]            # New column
+        'nickname': row[13],
+        'description': row[14],
+        'price': row[15]
     } for row in rows]
     return jsonify(data)
 
@@ -49,7 +54,8 @@ def add_data():
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute('''
-        INSERT INTO mask_order (size_x, size_y, size_z, color, entry, payment, payment_status, discount, date_of_order, finished, payment_received, source_of_order, nickname, description, price)
+        INSERT INTO mask_order (size_x, size_y, size_z, color, entry, payment, payment_status, discount, 
+                                date_of_order, finished, payment_received, source_of_order, nickname, description, price)
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         RETURNING id
     ''', (
@@ -97,6 +103,114 @@ def delete_data(id):
     cur.close()
     conn.close()
     return jsonify({'message': 'Order deleted successfully'})
+
+# Routes for colour table
+@app.route('/api/colours', methods=['GET'])
+def get_colours():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('SELECT id, colour_name FROM colour')
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    colours = [{'id': row[0], 'colour_name': row[1]} for row in rows]
+    return jsonify(colours)
+
+@app.route('/api/colours', methods=['POST'])
+def add_colour():
+    new_colour = request.json
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('INSERT INTO colour (colour_name) VALUES (%s) RETURNING id', (new_colour['colour_name'],))
+    colour_id = cur.fetchone()[0]
+    conn.commit()
+    cur.close()
+    conn.close()
+    return jsonify({'id': colour_id}), 201
+
+@app.route('/api/colours/<int:id>', methods=['PUT'])
+def update_colour(id):
+    updated_colour = request.json
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('UPDATE colour SET colour_name = %s WHERE id = %s', (updated_colour['colour_name'], id))
+    conn.commit()
+    cur.close()
+    conn.close()
+    return jsonify({'message': 'Colour updated successfully'})
+
+@app.route('/api/colours/<int:id>', methods=['DELETE'])
+def delete_colour(id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('DELETE FROM colour WHERE id = %s', (id,))
+    conn.commit()
+    cur.close()
+    conn.close()
+    return jsonify({'message': 'Colour deleted successfully'})
+
+# Routes for filament table
+@app.route('/api/filaments', methods=['GET'])
+def get_filaments():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('''
+        SELECT f.id, f.size, f.amount_used, f.date_of_addition, f.material, c.colour_name 
+        FROM filament f
+        JOIN colour c ON f.colour_id = c.id
+    ''')
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    filaments = [{
+        'id': row[0],
+        'size': row[1],
+        'amount_used': row[2],
+        'date_of_addition': row[3],
+        'material': row[4],
+        'colour_name': row[5]
+    } for row in rows]
+    return jsonify(filaments)
+
+@app.route('/api/filaments', methods=['POST'])
+def add_filament():
+    new_filament = request.json
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('''
+        INSERT INTO filament (colour_id, size, amount_used, material)
+        VALUES (%s, %s, %s, %s) RETURNING id
+    ''', (new_filament['colour_id'], new_filament['size'], new_filament['amount_used'], new_filament['material']))
+    filament_id = cur.fetchone()[0]
+    conn.commit()
+    cur.close()
+    conn.close()
+    return jsonify({'id': filament_id}), 201
+
+@app.route('/api/filaments/<int:id>', methods=['PUT'])
+def update_filament(id):
+    updated_filament = request.json
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('''
+        UPDATE filament
+        SET colour_id = %s, size = %s, amount_used = %s, material = %s
+        WHERE id = %s
+    ''', (updated_filament['colour_id'], updated_filament['size'], updated_filament['amount_used'], updated_filament['material'], id))
+    conn.commit()
+    cur.close()
+    conn.close()
+    return jsonify({'message': 'Filament updated successfully'})
+
+@app.route('/api/filaments/<int:id>', methods=['DELETE'])
+def delete_filament(id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('DELETE FROM filament WHERE id = %s', (id,))
+    conn.commit()
+    cur.close()
+    conn.close()
+    return jsonify({'message': 'Filament deleted successfully'})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
