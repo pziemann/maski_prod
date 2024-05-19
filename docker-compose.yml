@@ -21,6 +21,9 @@ services:
       DATABASE_USER: myuser
       DATABASE_PASSWORD: mypassword
       DATABASE_NAME: mydatabase
+      KEYCLOAK_URL: http://keycloak:8080/auth
+      KEYCLOAK_REALM: myrealm
+      KEYCLOAK_CLIENT_ID: myclient
     volumes:
       - ./backend:/app
     ports:
@@ -35,6 +38,9 @@ services:
       - backend
     environment:
       - REACT_APP_API_URL=https://maski.strupino.pl/api
+      - REACT_APP_KEYCLOAK_URL=http://keycloak:8080/auth
+      - REACT_APP_KEYCLOAK_REALM=myrealm
+      - REACT_APP_KEYCLOAK_CLIENT_ID=myclient
     volumes:
       - ./frontend:/app
       - /app/node_modules
@@ -48,6 +54,21 @@ services:
     depends_on:
       - frontend
       - backend
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0.4
+    environment:
+      DB_VENDOR: POSTGRES
+      DB_ADDR: db
+      DB_DATABASE: mydatabase
+      DB_USER: myuser
+      DB_PASSWORD: mypassword
+      KEYCLOAK_USER: admin
+      KEYCLOAK_PASSWORD: adminpassword
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
 
 volumes:
   db-data:
