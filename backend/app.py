@@ -2,6 +2,7 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 import psycopg2
 import os
+from datetime import date
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
@@ -14,6 +15,7 @@ def get_db_connection():
         password=os.environ['DATABASE_PASSWORD']
     )
     return conn
+
 
 @app.route('/api/data', methods=['GET'])
 def get_data():
@@ -106,7 +108,7 @@ def delete_data(id):
 def get_colours():
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute('SELECT id, colour_name FROM colour')
+    cur.execute('SELECT id, colour_name FROM colour WHERE active = TRUE')
     rows = cur.fetchall()
     cur.close()
     conn.close()
@@ -140,11 +142,11 @@ def update_colour(id):
 def delete_colour(id):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute('DELETE FROM colour WHERE id = %s', (id,))
+    cur.execute('UPDATE colour SET active = FALSE WHERE id = %s', (id,))
     conn.commit()
     cur.close()
     conn.close()
-    return jsonify({'message': 'Colour deleted successfully'})
+    return jsonify({'message': 'Colour set to inactive successfully'})
 
 @app.route('/api/filaments', methods=['GET'])
 def get_filaments():
@@ -154,6 +156,7 @@ def get_filaments():
         SELECT filament.id, filament.size, filament.amount_used, filament.date_of_addition, filament.material, colour.colour_name 
         FROM filament
         JOIN colour ON filament.colour_id = colour.id
+        WHERE filament.active = TRUE
     ''')
     rows = cur.fetchall()
     cur.close()
@@ -167,10 +170,10 @@ def add_filament():
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute('''
-        INSERT INTO filament (colour_id, size, amount_used, material)
-        VALUES ((SELECT id FROM colour WHERE colour_name = %s), %s, %s, %s)
+        INSERT INTO filament (colour_id, size, amount_used, date_of_addition, material)
+        VALUES ((SELECT id FROM colour WHERE colour_name = %s), %s, %s, %s, %s)
         RETURNING id
-    ''', (new_filament['colour_name'], new_filament['size'], new_filament['amount_used'], new_filament['material']))
+    ''', (new_filament['colour_name'], new_filament['size'], new_filament['amount_used'], date.today(), new_filament['material']))
     filament_id = cur.fetchone()[0]
     conn.commit()
     cur.close()
@@ -196,11 +199,11 @@ def update_filament(id):
 def delete_filament(id):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute('DELETE FROM filament WHERE id = %s', (id,))
+    cur.execute('UPDATE filament SET active = FALSE WHERE id = %s', (id,))
     conn.commit()
     cur.close()
     conn.close()
-    return jsonify({'message': 'Filament deleted successfully'})
+    return jsonify({'message': 'Filament set to inactive successfully'})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
