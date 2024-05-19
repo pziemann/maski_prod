@@ -19,7 +19,7 @@ def get_db_connection():
 def get_data():
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute('SELECT id, size_x, size_y, size_z, color, entry, payment, payment_status, discount, date_of_order, status, payment_received, source_of_order, nickname, description, price FROM mask_order')
+    cur.execute('SELECT id, size_x, size_y, size_z, color, entry, payment, payment_status, discount, date_of_order, status, payment_received, source_of_order, nickname, description, price, filament_id, amount_used FROM mask_order')
     rows = cur.fetchall()
     cur.close()
     conn.close()
@@ -39,7 +39,9 @@ def get_data():
         'source_of_order': row[12],
         'nickname': row[13],
         'description': row[14],
-        'price': row[15]
+        'price': row[15],
+        'filament_id': row[16],
+        'amount_used': row[17],
     } for row in rows]
     return jsonify(data)
 
@@ -49,15 +51,16 @@ def add_data():
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute('''
-        INSERT INTO mask_order (size_x, size_y, size_z, color, entry, payment, payment_status, discount, date_of_order, status, payment_received, source_of_order, nickname, description, price)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        INSERT INTO mask_order (size_x, size_y, size_z, color, entry, payment, payment_status, discount, date_of_order, status, payment_received, source_of_order, nickname, description, price, filament_id, amount_used)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         RETURNING id
     ''', (
         new_order['size_x'], new_order['size_y'], new_order['size_z'],
         new_order['color'], new_order['entry'], new_order['payment'],
         new_order['payment_status'], new_order['discount'], new_order['date_of_order'],
         new_order['status'], new_order['payment_received'], new_order['source_of_order'],
-        new_order['nickname'], new_order['description'], new_order['price']
+        new_order['nickname'], new_order['description'], new_order['price'],
+        new_order['filament_id'], new_order['amount_used']
     ))
     order_id = cur.fetchone()[0]
     conn.commit()
@@ -74,14 +77,15 @@ def update_data(id):
         UPDATE mask_order
         SET size_x = %s, size_y = %s, size_z = %s, color = %s, entry = %s, payment = %s, payment_status = %s,
             discount = %s, date_of_order = %s, status = %s, payment_received = %s, source_of_order = %s,
-            nickname = %s, description = %s, price = %s
+            nickname = %s, description = %s, price = %s, filament_id = %s, amount_used = %s
         WHERE id = %s
     ''', (
         updated_order['size_x'], updated_order['size_y'], updated_order['size_z'],
         updated_order['color'], updated_order['entry'], updated_order['payment'],
         updated_order['payment_status'], updated_order['discount'], updated_order['date_of_order'],
         updated_order['status'], updated_order['payment_received'], updated_order['source_of_order'],
-        updated_order['nickname'], updated_order['description'], updated_order['price'], id
+        updated_order['nickname'], updated_order['description'], updated_order['price'],
+        updated_order['filament_id'], updated_order['amount_used'], id
     ))
     conn.commit()
     cur.close()

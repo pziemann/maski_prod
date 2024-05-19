@@ -1,5 +1,5 @@
 -- Create colour table
-CREATE TABLE colour (
+CREATE TABLE IF NOT EXISTS colour (
     id SERIAL PRIMARY KEY,
     colour_name VARCHAR(50) UNIQUE NOT NULL
 );
@@ -8,7 +8,7 @@ CREATE TABLE colour (
 INSERT INTO colour (colour_name) VALUES ('black'), ('pink'), ('lavender'), ('blue'), ('yellow'), ('green');
 
 -- Create filament table
-CREATE TABLE filament (
+CREATE TABLE IF NOT EXISTS filament (
     id SERIAL PRIMARY KEY,
     colour_id INT NOT NULL,
     size FLOAT NOT NULL,
@@ -19,7 +19,7 @@ CREATE TABLE filament (
 );
 
 -- Create mask_order table
-CREATE TABLE mask_order (
+CREATE TABLE IF NOT EXISTS mask_order (
     id SERIAL PRIMARY KEY,
     size_x FLOAT,
     size_y FLOAT,
@@ -36,7 +36,8 @@ CREATE TABLE mask_order (
     nickname VARCHAR(50),
     description TEXT,
     price FLOAT,
-    filament_used INT REFERENCES filament(id) DEFAULT NULL
+    filament_id INT REFERENCES filament(id),
+    amount_used FLOAT DEFAULT 0
 );
 
 -- Insert sample data into mask_order table
