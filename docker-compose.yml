@@ -6,7 +6,7 @@ services:
     environment:
       POSTGRES_USER: myuser
       POSTGRES_PASSWORD: mypassword
-      POSTGRES_DB: mydatabase
+      POSTGRES_DB: keycloak
     volumes:
       - db-data:/var/lib/postgresql/data
       - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -21,13 +21,13 @@ services:
       DATABASE_USER: myuser
       DATABASE_PASSWORD: mypassword
       DATABASE_NAME: mydatabase
-      KEYCLOAK_URL: http://keycloak:8080/auth
+      KEYCLOAK_URL: https://maski.strupino.pl/auth
       KEYCLOAK_REALM: myrealm
       KEYCLOAK_CLIENT_ID: myclient
     volumes:
       - ./backend:/app
     ports:
-      - "5001:5000"
+      - "5000:5000"
     command: python -m flask run --host=0.0.0.0 --port=5000
 
   frontend:
@@ -38,7 +38,7 @@ services:
       - backend
     environment:
       - REACT_APP_API_URL=https://maski.strupino.pl/api
-      - REACT_APP_KEYCLOAK_URL=http://keycloak:8080/auth
+      - REACT_APP_KEYCLOAK_URL=https://maski.strupino.pl/auth
       - REACT_APP_KEYCLOAK_REALM=myrealm
       - REACT_APP_KEYCLOAK_CLIENT_ID=myclient
     volumes:
@@ -54,21 +54,36 @@ services:
     depends_on:
       - frontend
       - backend
-
+      - keycloak 
   keycloak:
-    image: quay.io/keycloak/keycloak:24.0.4
+    image: quay.io/keycloak/keycloak:latest
     environment:
-      DB_VENDOR: POSTGRES
-      DB_ADDR: db
-      DB_DATABASE: mydatabase
-      DB_USER: myuser
-      DB_PASSWORD: mypassword
-      KEYCLOAK_USER: admin
-      KEYCLOAK_PASSWORD: adminpassword
+      KC_DB: postgres
+      KC_DB_URL_HOST: db
+      KC_DB_URL_PORT: 5432
+      KC_DB_USERNAME: myuser
+      KC_DB_PASSWORD: mypassword
+      KC_DB_DATABASE: keycloak
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: adminpassword
+      PROXY_ADDRESS_FORWARDING: "true"
+      KC_HOSTNAME: maski.strupino.pl
+      KC_HTTP_RELATIVE_PATH: /auth
+      KC_HOSTNAME_STRICT: "true"
+      KC_HOSTNAME_STRICT_HTTPS: "true"
+      KC_HOSTNAME_ADMIN: maski.strupino.pl
+      KC_HTTP_PORT: 8080
+      KC_HTTPS_PORT: 8080 
+      KC_LOG_LEVEL: ALL
+      KC_METRICS_ENABLED: true
+      KEYCLOAK_FRONTEND_URL: https://maski.strupino.pl/auth
+      KC_PROXY: edge
+      KC_HEALTH_ENABLED: true
     ports:
       - "8080:8080"
     depends_on:
       - db
+    command: ["start-dev"]
 
 volumes:
   db-data:
